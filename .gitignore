@@ -1,0 +1,9 @@
+.venv/
+.venv314/
+__pycache__/
+.streamlit/
+.vercel/
+models/*.joblib
+models/*.pkl
+models/*.pickle
+output/

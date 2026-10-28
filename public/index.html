@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#10172a">
+    <meta name="description" content="Estimate student burnout-risk categories with a locally running machine-learning model.">
+    <title>Student Burnout Risk Estimator</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #172033;
+        background: #f4f6fb;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(ellipse at 10% 0%, rgba(116, 145, 255, .18), transparent 38rem),
+          #f4f6fb;
+      }
+
+      .shell { width: min(100% - 32px, 920px); margin: 0 auto; padding: 54px 0 42px; }
+      .hero { margin: 0 0 24px; }
+      .eyebrow { color: #5967c9; font-size: .76rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+      h1 { margin: 10px 0; color: #10172a; font-size: clamp(2rem, 6vw, 3.2rem); letter-spacing: -.055em; line-height: 1.08; }
+      .intro { max-width: 650px; margin: 0; color: #5c6578; line-height: 1.65; }
+      .card { border: 1px solid #e6e9f1; border-radius: 20px; background: rgba(255,255,255,.94); box-shadow: 0 16px 55px rgba(29, 42, 75, .08); }
+      .form-card { padding: clamp(20px, 4vw, 34px); }
+      .model-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 18px 0 0; color: #5c6578; font-size: .88rem; }
+      .pill { border: 1px solid #dfe4f0; border-radius: 999px; background: #f7f8fc; padding: 6px 11px; font-size: .78rem; font-weight: 700; }
+      .pill.good { border-color: #b6e4cc; background: #edfaf3; color: #18764a; }
+      .pill.bad { border-color: #f3c7c7; background: #fff3f3; color: #a53d3d; }
+      form { margin-top: 28px; }
+      .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; }
+      label { display: block; color: #30394c; font-size: .9rem; font-weight: 700; }
+      input, select {
+        width: 100%;
+        min-height: 46px;
+        margin-top: 8px;
+        border: 1px solid #d8deea;
+        border-radius: 11px;
+        background: #fff;
+        padding: 10px 12px;
+        color: #172033;
+        font: inherit;
+        outline: none;
+      }
+      input:focus, select:focus { border-color: #6975dc; box-shadow: 0 0 0 3px rgba(105,117,220,.15); }
+      input[type="checkbox"] { width: 19px; min-height: 19px; margin: 0 9px 0 0; accent-color: #5967c9; vertical-align: middle; }
+      .check-label { display: flex; min-height: 46px; align-items: center; }
+      .range { display: block; margin-top: 5px; color: #7a8395; font-size: .76rem; font-weight: 500; }
+      button {
+        min-height: 48px;
+        margin-top: 26px;
+        border: 0;
+        border-radius: 12px;
+        background: #4e5ac7;
+        padding: 0 22px;
+        color: #fff;
+        font: inherit;
+        font-weight: 750;
+        cursor: pointer;
+        box-shadow: 0 8px 18px rgba(78,90,199,.2);
+      }
+      button:hover { background: #414cb5; }
+      button:disabled { cursor: wait; opacity: .65; }
+      .error { margin-top: 15px; color: #a53d3d; }
+      .results { margin-top: 22px; padding: clamp(20px, 4vw, 30px); }
+      .result-label { margin: 0; color: #687286; font-size: .82rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+      .prediction { margin: 8px 0 20px; color: #4e5ac7; font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 800; letter-spacing: -.04em; }
+      .bar-row { display: grid; grid-template-columns: 90px minmax(0,1fr) 52px; align-items: center; gap: 12px; margin: 13px 0; color: #414b60; font-size: .88rem; }
+      .track { height: 10px; overflow: hidden; border-radius: 999px; background: #edf0f7; }
+      .bar { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #6674e2, #8b74e8); }
+      .notice { margin: 24px 0 0; color: #727c8f; font-size: .83rem; line-height: 1.6; }
+      details { margin-top: 16px; color: #5c6578; font-size: .88rem; line-height: 1.7; }
+      summary { color: #30394c; font-weight: 700; cursor: pointer; }
+      footer { margin-top: 18px; color: #8a93a3; font-size: .76rem; }
+      [hidden] { display: none !important; }
+      @media (max-width: 620px) {
+        .shell { width: min(100% - 22px, 920px); padding-top: 32px; }
+        .grid { grid-template-columns: 1fr; gap: 16px; }
+        .bar-row { grid-template-columns: 76px minmax(0,1fr) 46px; gap: 8px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div class="eyebrow">Student wellbeing · Model demo</div>
+        <h1>Student Burnout<br>Risk Estimator</h1>
+        <p class="intro">Enter student indicators to estimate a burnout-risk category. The model runs in your browser; submitted values are not sent to a prediction server.</p>
+        <div id="status" class="model-status" role="status" aria-live="polite">
+          <span class="pill">Loading model…</span>
+        </div>
+      </header>
+
+      <section class="card form-card" aria-label="Student information">
+        <form id="prediction-form">
+          <div id="feature-fields" class="grid"></div>
+          <button id="submit-button" type="submit" disabled>Load model to estimate</button>
+          <p id="error" class="error" role="alert" hidden></p>
+        </form>
+      </section>
+
+      <section id="results" class="card results" aria-live="polite" hidden>
+        <p class="result-label">Estimated category</p>
+        <h2 id="prediction" class="prediction"></h2>
+        <p class="result-label">Model class probabilities</p>
+        <div id="probabilities"></div>
+      </section>
+
+      <section class="card results">
+        <details>
+          <summary>About this model and its limitations</summary>
+          <p id="about"></p>
+          <p>This is a statistical estimate based on a single dataset, not a medical or counseling diagnosis. Its test accuracy is modest. Do not use it as the sole basis for high-stakes decisions or to label a student.</p>
+          <p>Predictions are computed locally in this browser. The static model file is downloaded when this page loads.</p>
+        </details>
+      </section>
+
+      <footer>Educational project · Predictions are estimates, not diagnoses.</footer>
+    </main>
+    <script>
+      const fieldsElement = document.querySelector("#feature-fields");
+      const form = document.querySelector("#prediction-form");
+      const submitButton = document.querySelector("#submit-button");
+      const errorElement = document.querySelector("#error");
+      const resultsElement = document.querySelector("#results");
+      const statusElement = document.querySelector("#status");
+      let model;
+
+      function prettyName(name) {
+        return name.replaceAll("_", " ");
+      }
+
+      function createField(field) {
+        const label = document.createElement("label");
+        label.htmlFor = `field-${field.name}`;
+        if (field.kind === "boolean") {
+          label.className = "check-label";
+          const input = document.createElement("input");
+          input.id = `field-${field.name}`;
+          input.name = field.name;
+          input.type = "checkbox";
+          input.checked = Boolean(field.default);
+          label.append(input, document.createTextNode(prettyName(field.name)));
+          return label;
+        }
+
+        label.textContent = prettyName(field.name);
+        const input = field.kind === "category"
+          ? document.createElement("select")
+          : document.createElement("input");
+        input.id = `field-${field.name}`;
+        input.name = field.name;
+        if (field.kind === "category") {
+          for (const choice of field.choices) {
+            const option = document.createElement("option");
+            option.value = choice;
+            option.textContent = choice.replaceAll("_", " ");
+            option.selected = choice === field.default;
+            input.append(option);
+          }
+        } else {
+          input.type = "number";
+          input.min = field.minimum;
+          input.max = field.maximum;
+          input.step = field.integer ? "1" : "any";
+          input.value = field.default;
+          const range = document.createElement("span");
+          range.className = "range";
+          range.textContent = `Dataset range: ${field.minimum} to ${field.maximum}`;
+          label.append(input, range);
+          return label;
+        }
+        label.append(input);
+        return label;
+      }
+
+      function makeInput() {
+        const sample = {};
+        for (const field of model.features) {
+          const input = document.querySelector(`#field-${CSS.escape(field.name)}`);
+          if (field.kind === "boolean") sample[field.name] = input.checked;
+          else if (field.kind === "number") {
+            const value = Number(input.value);
+            if (!Number.isFinite(value) || value < field.minimum || value > field.maximum) {
+              throw new Error(`${prettyName(field.name)} must be between ${field.minimum} and ${field.maximum}.`);
+            }
+            sample[field.name] = value;
+          } else sample[field.name] = input.value;
+        }
+        return sample;
+      }
+
+      function predict(sample) {
+        const values = model.feature_sources.map((source) => {
+          if (Object.hasOwn(source, "equals")) {
+            return sample[source.column] === source.equals ? 1 : 0;
+          }
+          return Number(sample[source.column]);
+        });
+        const probabilities = Array(model.classes.length).fill(0);
+        for (const tree of model.trees) {
+          let node = 0;
+          while (tree.left[node] !== -1) {
+            const feature = tree.feature[node];
+            node = values[feature] <= tree.threshold[node]
+              ? tree.left[node]
+              : tree.right[node];
+          }
+          const leaf = tree.values[node];
+          const total = leaf.reduce((sum, value) => sum + value, 0);
+          if (total > 0) {
+            for (let index = 0; index < probabilities.length; index += 1) {
+              probabilities[index] += leaf[index] / total;
+            }
+          }
+        }
+        for (let index = 0; index < probabilities.length; index += 1) {
+          probabilities[index] /= model.trees.length;
+        }
+        const bestIndex = probabilities.indexOf(Math.max(...probabilities));
+        return { label: model.classes[bestIndex], probabilities };
+      }
+
+      function showProbabilities(probabilities) {
+        const container = document.querySelector("#probabilities");
+        container.replaceChildren();
+        model.classes
+          .map((label, index) => ({ label, value: probabilities[index] }))
+          .sort((left, right) => right.value - left.value)
+          .forEach(({ label, value }) => {
+            const row = document.createElement("div");
+            row.className = "bar-row";
+            const name = document.createElement("span");
+            name.textContent = label;
+            const track = document.createElement("div");
+            track.className = "track";
+            const bar = document.createElement("div");
+            bar.className = "bar";
+            bar.style.width = `${(value * 100).toFixed(1)}%`;
+            track.append(bar);
+            const percent = document.createElement("strong");
+            percent.textContent = `${(value * 100).toFixed(1)}%`;
+            row.append(name, track, percent);
+            container.append(row);
+          });
+      }
+
+      async function loadModel() {
+        const response = await fetch("./burnout_model.json.gz");
+        if (!response.ok) throw new Error(`Could not load the model file (HTTP ${response.status}).`);
+        if (!("DecompressionStream" in window)) {
+          throw new Error("This browser does not support gzip model loading. Please use a current version of Chrome, Edge, Firefox, or Safari.");
+        }
+        const decompressed = response.body.pipeThrough(new DecompressionStream("gzip"));
+        model = await new Response(decompressed).json();
+        for (const field of model.features) fieldsElement.append(createField(field));
+        const accuracy = (model.test_metrics.accuracy * 100).toFixed(1);
+        statusElement.replaceChildren();
+        const status = document.createElement("span");
+        status.className = "pill good";
+        status.textContent = `${model.selected_model} · ${accuracy}% held-out test accuracy`;
+        statusElement.append(status);
+        submitButton.disabled = false;
+        submitButton.textContent = "Estimate risk";
+        document.querySelector("#about").textContent =
+          `The browser-friendly model was evaluated on ${model.test_metrics.test_rows.toLocaleString()} held-out records. Its accuracy was ${accuracy}%, balanced accuracy ${(model.test_metrics.balanced_accuracy * 100).toFixed(1)}%, and macro F1 ${model.test_metrics.macro_f1.toFixed(3)}.`;
+      }
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        errorElement.hidden = true;
+        try {
+          const result = predict(makeInput());
+          document.querySelector("#prediction").textContent = result.label;
+          showProbabilities(result.probabilities);
+          resultsElement.hidden = false;
+        } catch (error) {
+          errorElement.textContent = error.message;
+          errorElement.hidden = false;
+        }
+      });
+
+      loadModel().catch((error) => {
+        statusElement.replaceChildren();
+        const status = document.createElement("span");
+        status.className = "pill bad";
+        status.textContent = "Model unavailable";
+        statusElement.append(status);
+        errorElement.textContent = error.message;
+        errorElement.hidden = false;
+        submitButton.textContent = "Model unavailable";
+        console.error(error);
+      });
+    </script>
+  </body>
+</html>

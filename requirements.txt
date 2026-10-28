@@ -1,0 +1,6 @@
+kagglehub
+joblib
+matplotlib
+pandas
+scikit-learn>=1.4
+seaborn
