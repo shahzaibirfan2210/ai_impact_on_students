@@ -3,17 +3,21 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#10172a">
+    <meta name="theme-color" content="#f5f7ff">
     <meta name="description" content="Estimate student burnout-risk categories with a locally running machine-learning model.">
     <title>Student Burnout Risk Estimator</title>
     <style>
       :root {
         color-scheme: light;
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        color: #172033;
-        background: #f4f6fb;
+        color: #202744;
+        background: #f5f7ff;
         font-synthesis: none;
         text-rendering: optimizeLegibility;
+        --ink: #202744;
+        --muted: #78819b;
+        --indigo: #5956d6;
+        --mint: #78ebc4;
       }
 
       * { box-sizing: border-box; }
@@ -23,86 +27,199 @@
         min-height: 100vh;
         margin: 0;
         background:
-          radial-gradient(ellipse at 10% 0%, rgba(116, 145, 255, .18), transparent 38rem),
-          #f4f6fb;
+          radial-gradient(ellipse at 7% 9%, rgba(190, 185, 255, .35), transparent 29rem),
+          radial-gradient(ellipse at 96% 32%, rgba(158, 241, 220, .24), transparent 26rem),
+          #f5f7ff;
       }
 
-      .shell { width: min(100% - 32px, 920px); margin: 0 auto; padding: 54px 0 42px; }
-      .hero { margin: 0 0 24px; }
-      .eyebrow { color: #5967c9; font-size: .76rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
-      h1 { margin: 10px 0; color: #10172a; font-size: clamp(2rem, 6vw, 3.2rem); letter-spacing: -.055em; line-height: 1.08; }
-      .intro { max-width: 650px; margin: 0; color: #5c6578; line-height: 1.65; }
-      .card { border: 1px solid #e6e9f1; border-radius: 20px; background: rgba(255,255,255,.94); box-shadow: 0 16px 55px rgba(29, 42, 75, .08); }
-      .form-card { padding: clamp(20px, 4vw, 34px); }
-      .model-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 18px 0 0; color: #5c6578; font-size: .88rem; }
-      .pill { border: 1px solid #dfe4f0; border-radius: 999px; background: #f7f8fc; padding: 6px 11px; font-size: .78rem; font-weight: 700; }
-      .pill.good { border-color: #b6e4cc; background: #edfaf3; color: #18764a; }
-      .pill.bad { border-color: #f3c7c7; background: #fff3f3; color: #a53d3d; }
-      form { margin-top: 28px; }
-      .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; }
-      label { display: block; color: #30394c; font-size: .9rem; font-weight: 700; }
+      .shell { width: min(100% - 36px, 1030px); margin: 0 auto; padding: 34px 0 48px; }
+      .hero {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(220px, .75fr);
+        align-items: center;
+        gap: 28px;
+        overflow: hidden;
+        min-height: 310px;
+        margin: 0 0 25px;
+        border: 1px solid rgba(255,255,255,.12);
+        border-radius: 30px;
+        background:
+          radial-gradient(ellipse at 89% 19%, rgba(130, 113, 255, .43), transparent 19rem),
+          radial-gradient(ellipse at 69% 110%, rgba(61, 190, 164, .24), transparent 20rem),
+          linear-gradient(125deg, #181d3e 0%, #27234f 55%, #30306c 100%);
+        padding: clamp(28px, 5vw, 52px);
+        color: white;
+        box-shadow: 0 24px 64px rgba(36, 36, 92, .2);
+      }
+      .hero::before, .hero::after { position: absolute; z-index: 0; border: 1px solid rgba(208, 225, 255, .13); border-radius: 50%; content: ""; pointer-events: none; }
+      .hero::before { top: -135px; right: 65px; width: 355px; height: 355px; }
+      .hero::after { top: -82px; right: 118px; width: 245px; height: 245px; }
+      .hero-copy, .hero-art { position: relative; z-index: 1; }
+      .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 30px; color: rgba(255,255,255,.86); font-size: .78rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+      .brand-mark { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid rgba(120,235,196,.4); border-radius: 12px; background: rgba(120,235,196,.12); color: var(--mint); }
+      .brand-mark svg { width: 19px; height: 19px; }
+      .eyebrow { display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(191,209,255,.22); border-radius: 999px; background: rgba(255,255,255,.08); padding: 7px 12px; color: #dedcff; font-size: .75rem; font-weight: 700; letter-spacing: .04em; }
+      .eyebrow::before { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 12px rgba(120,235,196,.8); content: ""; }
+      h1 { margin: 18px 0 13px; color: #fff; font-size: clamp(2.2rem, 5.3vw, 3.7rem); letter-spacing: -.06em; line-height: 1.02; }
+      h1 span { color: var(--mint); }
+      .intro { max-width: 560px; margin: 0; color: #c6c9e2; font-size: .98rem; line-height: 1.7; }
+      .model-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 21px 0 0; color: #d7d9ee; font-size: .85rem; }
+      .pill { display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(211,219,255,.22); border-radius: 999px; background: rgba(255,255,255,.08); padding: 8px 12px; color: #eeefff; font-size: .76rem; font-weight: 700; }
+      .pill.good { border-color: rgba(120,235,196,.35); background: rgba(120,235,196,.12); color: #a9ffde; }
+      .pill.good::before { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); content: ""; }
+      .pill.bad { border-color: rgba(255,167,167,.4); background: rgba(255,167,167,.13); color: #ffd2d2; }
+      .hero-art { display: grid; min-height: 208px; place-items: center; }
+      .orbit { position: absolute; width: 188px; height: 188px; border: 1px solid rgba(201,211,255,.22); border-radius: 50%; }
+      .orbit::before, .orbit::after { position: absolute; border: 1px solid rgba(201,211,255,.16); border-radius: 50%; content: ""; }
+      .orbit::before { inset: 18px; }
+      .orbit::after { inset: 39px; }
+      .orbit-dot { position: absolute; top: 20px; right: 14px; width: 10px; height: 10px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 20px rgba(120,235,196,.9); }
+      .art-core { display: grid; width: 108px; height: 108px; place-items: center; border: 1px solid rgba(255,255,255,.25); border-radius: 34px; background: linear-gradient(145deg, rgba(142,129,255,.48), rgba(91,213,183,.2)); box-shadow: 0 16px 50px rgba(10,14,39,.32), inset 0 1px 0 rgba(255,255,255,.22); transform: rotate(-8deg); }
+      .art-core svg { width: 58px; height: 58px; transform: rotate(8deg); }
+      .art-caption { position: absolute; right: -1px; bottom: 1px; border: 1px solid rgba(255,255,255,.17); border-radius: 15px; background: rgba(19,23,56,.72); padding: 11px 15px; box-shadow: 0 12px 30px rgba(12,14,37,.22); backdrop-filter: blur(12px); }
+      .art-caption strong { display: block; color: #fff; font-size: .9rem; }
+      .art-caption span { color: #bdbfdb; font-size: .72rem; }
+      .card { border: 1px solid #e8eaf5; border-radius: 23px; background: rgba(255,255,255,.94); box-shadow: 0 15px 44px rgba(44,49,94,.065); }
+      .form-card { padding: clamp(21px, 4vw, 38px); }
+      .section-heading { display: flex; align-items: flex-start; gap: 14px; margin: 0 0 27px; }
+      .section-icon { display: grid; width: 43px; height: 43px; flex: 0 0 43px; place-items: center; border: 1px solid #e5e3ff; border-radius: 15px; background: #f1f0ff; color: var(--indigo); }
+      .section-icon svg { width: 21px; height: 21px; }
+      .section-heading h2 { margin: 1px 0 5px; color: var(--ink); font-size: 1.2rem; letter-spacing: -.03em; }
+      .section-heading p { margin: 0; color: var(--muted); font-size: .86rem; line-height: 1.55; }
+      form { margin: 0; }
+      .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+      label { display: block; min-width: 0; border: 1px solid #edf0f7; border-radius: 15px; background: #fafbff; padding: 13px 14px 12px; color: #38415f; font-size: .82rem; font-weight: 750; transition: border-color .2s, background .2s, box-shadow .2s; }
+      label:focus-within { border-color: #aaa5f5; background: #fff; box-shadow: 0 0 0 3px rgba(110,100,221,.09); }
+      label.check-label { display: flex; align-items: center; min-height: 72px; }
       input, select {
         width: 100%;
-        min-height: 46px;
+        min-height: 43px;
         margin-top: 8px;
-        border: 1px solid #d8deea;
-        border-radius: 11px;
+        border: 1px solid #e3e7f1;
+        border-radius: 10px;
         background: #fff;
-        padding: 10px 12px;
-        color: #172033;
+        padding: 9px 11px;
+        color: #252c49;
         font: inherit;
+        font-weight: 550;
         outline: none;
       }
-      input:focus, select:focus { border-color: #6975dc; box-shadow: 0 0 0 3px rgba(105,117,220,.15); }
-      input[type="checkbox"] { width: 19px; min-height: 19px; margin: 0 9px 0 0; accent-color: #5967c9; vertical-align: middle; }
-      .check-label { display: flex; min-height: 46px; align-items: center; }
-      .range { display: block; margin-top: 5px; color: #7a8395; font-size: .76rem; font-weight: 500; }
+      input:focus, select:focus { border-color: #8881e9; box-shadow: 0 0 0 3px rgba(105,94,221,.12); }
+      input[type="checkbox"] { width: 19px; min-height: 19px; flex: 0 0 19px; margin: 0 11px 0 0; accent-color: #615bd7; vertical-align: middle; }
+      .range { display: block; margin-top: 6px; color: #969db1; font-size: .69rem; font-weight: 500; }
       button {
-        min-height: 48px;
-        margin-top: 26px;
+        display: inline-flex;
+        min-height: 51px;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 24px;
         border: 0;
-        border-radius: 12px;
-        background: #4e5ac7;
-        padding: 0 22px;
+        border-radius: 13px;
+        background: linear-gradient(105deg, #5c59d8, #7568e8);
+        padding: 0 23px;
         color: #fff;
         font: inherit;
+        font-size: .91rem;
         font-weight: 750;
         cursor: pointer;
-        box-shadow: 0 8px 18px rgba(78,90,199,.2);
+        box-shadow: 0 9px 19px rgba(91,85,211,.22);
+        transition: transform .18s, box-shadow .18s, filter .18s;
       }
-      button:hover { background: #414cb5; }
+      button::after { content: "→"; font-size: 1.1rem; transition: transform .18s; }
+      button:hover { filter: brightness(1.05); box-shadow: 0 12px 23px rgba(91,85,211,.3); transform: translateY(-1px); }
+      button:hover::after { transform: translateX(3px); }
+      button:focus-visible { outline: 3px solid #aaa5f5; outline-offset: 3px; }
       button:disabled { cursor: wait; opacity: .65; }
       .error { margin-top: 15px; color: #a53d3d; }
-      .results { margin-top: 22px; padding: clamp(20px, 4vw, 30px); }
-      .result-label { margin: 0; color: #687286; font-size: .82rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-      .prediction { margin: 8px 0 20px; color: #4e5ac7; font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 800; letter-spacing: -.04em; }
-      .bar-row { display: grid; grid-template-columns: 90px minmax(0,1fr) 52px; align-items: center; gap: 12px; margin: 13px 0; color: #414b60; font-size: .88rem; }
-      .track { height: 10px; overflow: hidden; border-radius: 999px; background: #edf0f7; }
-      .bar { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #6674e2, #8b74e8); }
-      .notice { margin: 24px 0 0; color: #727c8f; font-size: .83rem; line-height: 1.6; }
-      details { margin-top: 16px; color: #5c6578; font-size: .88rem; line-height: 1.7; }
-      summary { color: #30394c; font-weight: 700; cursor: pointer; }
-      footer { margin-top: 18px; color: #8a93a3; font-size: .76rem; }
+      .results { margin-top: 20px; padding: clamp(22px, 4vw, 33px); }
+      .result-label { margin: 0; color: #828aa1; font-size: .73rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+      .prediction { display: inline-flex; align-items: center; gap: 11px; margin: 9px 0 25px; color: #5d58d5; font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 850; letter-spacing: -.05em; }
+      .prediction::before { width: 13px; height: 13px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 13%, transparent); content: ""; }
+      #results[data-risk="High"] .prediction { color: #d45d74; }
+      #results[data-risk="Low"] .prediction { color: #259a76; }
+      #results[data-risk="Medium"] .prediction { color: #ba8a30; }
+      .probability-heading { margin-top: 2px; padding-top: 21px; border-top: 1px solid #eff0f6; }
+      .bar-row { display: grid; grid-template-columns: 90px minmax(0,1fr) 52px; align-items: center; gap: 12px; margin: 15px 0; color: #505a76; font-size: .84rem; }
+      .track { height: 9px; overflow: hidden; border-radius: 999px; background: #edf0f7; }
+      .bar { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #7771e6, #a19af6); transition: width .45s ease; }
+      .bar-row[data-risk="High"] .bar { background: linear-gradient(90deg, #eb7890, #f3a5a8); }
+      .bar-row[data-risk="Low"] .bar { background: linear-gradient(90deg, #48bd99, #8adeb8); }
+      .bar-row[data-risk="Medium"] .bar { background: linear-gradient(90deg, #e6b74e, #f3d288); }
+      .bar-row strong { text-align: right; color: #343c59; font-size: .8rem; }
+      details { margin-top: 16px; color: #747d95; font-size: .85rem; line-height: 1.75; }
+      summary { display: flex; align-items: center; gap: 9px; color: #424a68; font-weight: 750; cursor: pointer; list-style: none; }
+      summary::-webkit-details-marker { display: none; }
+      summary::before { display: grid; width: 23px; height: 23px; place-items: center; border-radius: 8px; background: #f0efff; color: #615bd7; content: "+"; font-size: 1rem; }
+      details[open] summary::before { content: "−"; }
+      footer { display: flex; align-items: center; gap: 8px; margin-top: 20px; color: #929ab0; font-size: .76rem; }
+      footer::before { width: 7px; height: 7px; border-radius: 50%; background: #69c9a7; content: ""; }
       [hidden] { display: none !important; }
-      @media (max-width: 620px) {
-        .shell { width: min(100% - 22px, 920px); padding-top: 32px; }
-        .grid { grid-template-columns: 1fr; gap: 16px; }
+      @media (max-width: 700px) {
+        .shell { width: min(100% - 22px, 1030px); padding-top: 14px; }
+        .hero { grid-template-columns: minmax(0, 1fr) 180px; gap: 8px; min-height: 290px; border-radius: 23px; padding: 28px; }
+        .hero-art { min-height: 180px; transform: scale(.83); }
+        .art-caption { right: -18px; }
+      }
+      @media (max-width: 540px) {
+        .shell { padding-bottom: 28px; }
+        .hero { grid-template-columns: 1fr; min-height: auto; padding: 25px 22px; }
+        .brand { margin-bottom: 22px; }
+        h1 { font-size: clamp(2.25rem, 11vw, 3.2rem); }
+        .hero-art { display: none; }
+        .intro { font-size: .9rem; }
+        .grid { grid-template-columns: 1fr; gap: 11px; }
+        .section-heading { margin-bottom: 21px; }
         .bar-row { grid-template-columns: 76px minmax(0,1fr) 46px; gap: 8px; }
+        button { width: 100%; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
       }
     </style>
   </head>
   <body>
     <main class="shell">
       <header class="hero">
-        <div class="eyebrow">Student wellbeing · Model demo</div>
-        <h1>Student Burnout<br>Risk Estimator</h1>
-        <p class="intro">Enter student indicators to estimate a burnout-risk category. The model runs in your browser; submitted values are not sent to a prediction server.</p>
-        <div id="status" class="model-status" role="status" aria-live="polite">
-          <span class="pill">Loading model…</span>
+        <div class="hero-copy">
+          <div class="brand">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 20v-8m0 3c-4.5 0-7-2.7-7-7 4.3 0 7 2.5 7 7Zm0-3c0-4.2 2.2-6.8 7-7 0 4.4-2.6 7-7 7Z" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"/>
+              </svg>
+            </span>
+            <span>Student wellbeing</span>
+          </div>
+          <div class="eyebrow">A little insight, a lot of care</div>
+          <h1>Understand the<br><span>signals.</span> Support the student.</h1>
+          <p class="intro">Explore a data-driven estimate of burnout risk. Thoughtfully designed to support awareness—not replace a conversation.</p>
+          <div id="status" class="model-status" role="status" aria-live="polite">
+            <span class="pill">Loading model…</span>
+          </div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="orbit"><span class="orbit-dot"></span></div>
+          <div class="art-core">
+            <svg viewBox="0 0 64 64" fill="none">
+              <path d="M32 50V29m0 8C20 37 14 30 14 18c11 0 18 7 18 19Zm0-8c0-12 6-20 18-21 0 12-6 21-18 21Z" stroke="#adffe1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"/>
+              <path d="M23 51h18" stroke="#fff" stroke-linecap="round" stroke-width="2.5"/>
+            </svg>
+          </div>
+          <div class="art-caption"><strong>Care starts with understanding</strong><span>Private · In-browser · Informational</span></div>
         </div>
       </header>
 
       <section class="card form-card" aria-label="Student information">
+        <div class="section-heading">
+          <span class="section-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 3.5 21 8l-9 4.5L3 8l9-4.5Z" stroke="currentColor" stroke-linejoin="round" stroke-width="1.7"/>
+              <path d="M6.5 10v5.5c3.5 2.8 7.5 2.8 11 0V10M21 8v6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7"/>
+            </svg>
+          </span>
+          <div><h2>Student profile</h2><p>Share a few study and wellbeing indicators to get started.</p></div>
+        </div>
         <form id="prediction-form">
           <div id="feature-fields" class="grid"></div>
           <button id="submit-button" type="submit" disabled>Load model to estimate</button>
@@ -113,7 +230,7 @@
       <section id="results" class="card results" aria-live="polite" hidden>
         <p class="result-label">Estimated category</p>
         <h2 id="prediction" class="prediction"></h2>
-        <p class="result-label">Model class probabilities</p>
+        <p class="result-label probability-heading">Model class probabilities</p>
         <div id="probabilities"></div>
       </section>
 
@@ -155,6 +272,7 @@
           return label;
         }
 
+        label.className = "field-control";
         label.textContent = prettyName(field.name);
         const input = field.kind === "category"
           ? document.createElement("select")
@@ -241,6 +359,7 @@
           .forEach(({ label, value }) => {
             const row = document.createElement("div");
             row.className = "bar-row";
+            row.dataset.risk = label;
             const name = document.createElement("span");
             name.textContent = label;
             const track = document.createElement("div");
@@ -282,6 +401,7 @@
         errorElement.hidden = true;
         try {
           const result = predict(makeInput());
+          resultsElement.dataset.risk = result.label;
           document.querySelector("#prediction").textContent = result.label;
           showProbabilities(result.probabilities);
           resultsElement.hidden = false;
