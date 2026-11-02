@@ -33,7 +33,7 @@ compressed model from local files.
 
 ## Retrain and export
 
-Install the training dependencies listed in `requirements.txt`, then run:
+Install the training dependencies listed in `training-requirements.txt`, then run:
 
 ```powershell
 python train_model.py
