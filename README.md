@@ -4,6 +4,9 @@ This project includes a static web app for Vercel. The app runs model
 predictions entirely in the visitor's browser; it has no prediction API or
 server-side form submission.
 
+`streamlit_app.py` is an optional local Streamlit interface. It is not the
+Vercel entry point; Vercel serves the static app from `public/`.
+
 ## Deploy to Vercel
 
 1. Import this GitHub repository in the Vercel dashboard.
